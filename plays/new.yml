@@ -1,0 +1,23 @@
+- name: New PR
+  hosts: all
+  vars:
+    dcibot_repos:
+      - intel-nm-lab-config
+      - dallas-pipeline
+      - example-cnf-config
+  tasks:
+
+    - name: Set status for repos with dcibot
+      ansible.builtin.debug:
+        msg: "Set pending status to repo {{ repo }} via {{ ansible_eda.event.pull_request.url }}"
+      when: ansible_eda.event.pull_request.head.repo.name in dcibot_repos
+
+    - name: Trigger preflight CI
+      ansible.builtin.debug:
+        msg: "check_workload {{ ansible_eda.event.pull_request.html_url }} prefight-gren"
+      when: ansible_eda.event.pull_request.head.repo.name == "openshift-preflight"
+
+    - name: Trigger CNF Cert Suite
+      ansible.builtin.debug:
+        msg: "check_workload {{ ansible_eda.event.pull_request.html_url }} tnf-test-cnf-green"
+      when: ansible_eda.event.pull_request.head.repo.name == "cnf-certification-test"

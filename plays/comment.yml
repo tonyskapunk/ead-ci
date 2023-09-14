@@ -1,0 +1,44 @@
+- name: Comment in PR
+  hosts: all
+  vars:
+    gh_voting_repos:
+      - cnf-certification-test
+      - dallas-pipeline
+      - example-cnf-config
+  tasks:
+    - name: Action - check
+      when:
+        - ansible_eda.event.comment.body is defined
+        - ansible_eda.event.comment.body is regex("^\s*check\s+(dallas|workload)\s")
+      block:
+        - name: Some user validation needs to be done here
+          ansible.builtin.debug:
+            msg: "User {{ ansible_eda.event.comment.user.login }} is authorized to call check dallas or workload"
+
+        - name: Check dallas
+          vars:
+            payload: "{{ ansible_eda.event.comment.body | regex_replace('^\\s*check\\s+dallas\\s', '') }}"
+          ansible.builtin.debug:
+            msg: >-
+              dci-pipeline-check
+              {{ ansible_eda.event.issue.pull_request.html_url }}
+              {{ payload }}
+          when: ansible_eda.event.comment.body is regex("^\s*check\s+dallas\s")
+
+        - name: Check workload
+          vars:
+            payload: "{{ ansible_eda.event.comment.body | regex_replace('^\\s*check\\s+workload\\s', '') }}"
+          ansible.builtin.debug:
+            msg: >-
+              check_workload
+              {{ ansible_eda.event.issue.pull_request.html_url }}
+              {{ payload }}
+          when: ansible_eda.event.comment.body is regex("^\s*check\s+workload\s")
+          register: check_workload
+
+        - name: Set status for repos with voting enabled
+          ansible.builtin.debug:
+            msg: "Set pending status to repo {{ ansible_eda.event.repository.name }} via {{ ansible_eda.event.pull_request.url }}"
+          when:
+            - ansible_eda.event.repository.name in gh_voting_repos
+            - check_workload is changed
