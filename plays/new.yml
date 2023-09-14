@@ -1,0 +1,33 @@
+- name: New PR
+  hosts: all
+  vars:
+    dcibot_repos:
+      - dallas-pipeline
+      - example-cnf-config
+    other_repos:
+      - openshift-preflight
+      - cnf-certification-test
+  tasks:
+
+    - name: Set status for repos with dcibot
+      ansible.builtin.debug:
+        msg: "Set pending status to repo {{ repo }} via {{ ansible_eda.event.pull_request.url }}"
+      when: ansible_eda.event.pull_request.head.repo.name in dcibot_repos
+
+    - name: Triggering jobs for other repos
+      when: ansible_eda.event.pull_request.head.repo.name in other_repos
+      block:
+        - name: Trigger preflight CI
+          ansible.builtin.debug:
+            msg: "check_workload {{ ansible_eda.event.pull_request.html_url }} prefight-gren"
+          when: ansible_eda.event.pull_request.head.repo.name == "openshift-preflight"
+
+        - name: Trigger CNF Cert Suite
+          ansible.builtin.debug:
+            msg: "check_workload {{ ansible_eda.event.pull_request.html_url }} tnf-test-cnf-green"
+          when: ansible_eda.event.pull_request.head.repo.name == "cnf-certification-test"
+
+    - name: Trigger job (NEW)
+      ansible.builtin.debug:
+        msg: "dci-pipeline-check {{ ansible_eda.event.pull_request.html_url }} ocp-4.13-vanilla"
+      when: ansible_eda.event.pull_request.head.repo.name not in other_repos

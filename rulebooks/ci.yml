@@ -1,0 +1,24 @@
+- name: CI for GH events through mqtt
+  hosts: all
+  sources:
+    - kubealex.eda.mqtt:
+        host: "{{ CI_HOST }}"
+        username: "{{ CI_TOKEN }}"
+        port: 1883
+        topic: github/#
+      filters:
+        - ansible.eda.json_filter:
+            exclude_keys: workflow_job
+
+  rules:
+    - name: New or syncrhonized PR
+      condition: event.action in ["reopened", "opened", "synchronize"]
+      action:
+        run_playbook:
+          name: plays/new.yml
+
+    - name: New comment in PR
+      condition: event.action == "created" and event.comment.body != null
+      action:
+        run_playbook:
+          name: plays/comment.yml
